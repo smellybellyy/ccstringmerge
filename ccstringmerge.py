@@ -241,6 +241,7 @@ class StringPool:
     def __init__(self):
         self.tables, self.versions = {}, {}
         self.conflicts, self.same, self.examples, self.source_tables = 0, 0, [], 0
+        self.filled = 0
 
     def add(self, rel, tables):
         for lang, ver, ent in tables:
@@ -253,6 +254,12 @@ class StringPool:
                     t[k] = v
                 elif old == v:
                     self.same += 1
+                elif old == '' or v == '':
+                    # 2026-11-05 PLAY-12 run B: an empty text kept by name order hid "By TheJim07 (MTS)." that the
+                    # game had shown; an empty text never wins over a real one
+                    self.filled += 1
+                    if old == '':
+                        t[k] = v
                 else:
                     self.conflicts += 1
                     if len(self.examples) < 20:
@@ -350,7 +357,7 @@ def make_plan(target, mode, backup_root):
 
 def plan_report(plan):
     p, L = plan.pool, []
-    L.append('Folder: %s' % plan.target)
+    L.append('Folder: %s' % plain(plan.target))
     L.append('Mode:   %s' % ('merge packages + one strings package' if plan.mode == 'merge' else 'one strings package'))
     L.append('')
     if plan.mode == 'merge':
@@ -367,6 +374,7 @@ def plan_report(plan):
     L.append('Strings:                      %d' % p.count())
     L.append('Same string in two packages:  %d (kept once)' % p.same)
     L.append('Same key, different text:     %d (the first one in name order is kept)' % p.conflicts)
+    L.append('Same key, one text empty:     %d (the real text is kept)' % p.filled)
     L.append('Left alone:                   %d' % len(plan.skipped))
     for rel, why in plan.skipped:
         L.append('  - %s: %s' % (rel, why))
@@ -387,6 +395,24 @@ def sha256(path):
         for chunk in iter(lambda: f.read(1 << 20), b''):
             h.update(chunk)
     return h.hexdigest()
+
+
+def long_path(p):
+    """Windows: the \\\\?\\ form of p, so paths past 260 characters work. CC file names are long, and the backup
+    folder adds ~40 characters to each of them (PLAY-12 test, 2026-11-05: WinError 3 at file 6000 of 6232)."""
+    p = os.path.abspath(p)
+    if os.name != 'nt' or p.startswith('\\\\?\\'):
+        return p
+    if p.startswith('\\\\'):
+        return '\\\\?\\UNC\\' + p[2:]
+    return '\\\\?\\' + p
+
+
+def plain(p):
+    """The normal form of a long_path, for messages and the manifest."""
+    if p.startswith('\\\\?\\UNC\\'):
+        return '\\\\' + p[8:]
+    return p[4:] if p.startswith('\\\\?\\') else p
 
 
 def backup_root_for(target):
@@ -438,7 +464,7 @@ def apply(plan, backup_root):
         n += 1; run_dir = os.path.join(backup_root, '%s_%d' % (stamp, n))
     os.makedirs(run_dir)
     m = Manifest(os.path.join(run_dir, MANIFEST))
-    m.write(op='run', version=VERSION, mode=plan.mode, target=os.path.abspath(plan.target), started=stamp)
+    m.write(op='run', version=VERSION, mode=plan.mode, target=plain(os.path.abspath(plan.target)), started=stamp)
     with open(os.path.join(run_dir, REPORT), 'w', encoding='utf-8') as f:
         f.write(plan_report(plan) + '\n')
     try:
@@ -575,14 +601,14 @@ def find_runs(backup_root):
 def undo(run_dir, force=False, rollback=False):
     """Checks everything first and changes nothing if a file was edited or replaced since the run (unless force,
     which moves such files to <run>/changed-since instead). rollback: undo a run that just failed, our own files only."""
-    run_dir = os.path.abspath(run_dir)
+    run_dir = long_path(run_dir)
     recs = read_manifest(run_dir)
-    target = recs[0]['target']
+    target = long_path(recs[0]['target'])
     if any(r['op'] == 'undone' for r in recs):
         print('This run was already undone.'); return False
     if not rollback:
         for rd, rr in find_runs(os.path.dirname(run_dir)):
-            if rd > run_dir and rr[0]['target'] == target and any(r['op'] == 'done' for r in rr) \
+            if rd > run_dir and plain(rr[0]['target']) == plain(target) and any(r['op'] == 'done' for r in rr) \
                     and not any(r['op'] == 'undone' for r in rr):
                 print('A later run (%s) on the same folder has to be undone first.' % os.path.basename(rd))
                 return False
@@ -614,14 +640,14 @@ def undo(run_dir, force=False, rollback=False):
             else:
                 blocking.append('%s changed or was replaced since the run' % rel); aside.append((dst, rel))
         elif rel in written and not rollback:
-            notes.append('%s was deleted since the run, not brought back (its backup stays in %s)' % (rel, run_dir))
+            notes.append('%s was deleted since the run, not brought back (its backup stays in %s)' % (rel, plain(run_dir)))
             continue
         restore.append((bak, dst))
     if blocking and not (force or rollback):
         for p in blocking:
             print('  - ' + p)
         print('Nothing changed. Run again with --force to move those files to %s and undo anyway.'
-              % os.path.join(run_dir, 'changed-since'))
+              % os.path.join(plain(run_dir), 'changed-since'))
         return False
     for p, rel in aside:
         move_file(p, os.path.join(run_dir, 'changed-since', rel))
@@ -687,29 +713,34 @@ def main(argv=None):
         print('\nStopped.'); return 1
     finally:
         if pause:
-            input('\nPress Enter to close.')
+            # NUL counts as a tty on Windows, so a closed stdin still gets here
+            try:
+                input('\nPress Enter to close.')
+            except EOFError:
+                pass
 
 
 def run(a):
     print('CC String Merge %s\n' % VERSION)
     folder = a.undo or a.folder
+    folder = long_path(folder) if folder else None
     if folder and os.path.isfile(os.path.join(folder, MANIFEST)):
         if game_running():
             print('The Sims 3 is running. Close the game first.'); return 1
-        print('Undoing the run in %s' % folder)
+        print('Undoing the run in %s' % plain(folder))
         if not a.yes and input('Type Y and press Enter to undo: ').strip().lower() != 'y':
             print('Nothing changed.'); return 0
         return 0 if undo(folder, force=a.force) else 1
     if a.undo:
         print('%s is not a backup run folder (no %s in it).' % (a.undo, MANIFEST)); return 1
-    target = os.path.abspath(folder or default_target())
+    target = long_path(folder or default_target())
     if not os.path.isdir(target):
-        print('Folder not found: %s\nDrop your Mods\\Packages folder onto the program instead.' % target); return 1
+        print('Folder not found: %s\nDrop your Mods\\Packages folder onto the program instead.' % plain(target)); return 1
     if game_running() and not a.dry_run:
         print('The Sims 3 is running. Close the game first.'); return 1
     backup_root = backup_root_for(target)
     mode = 'merge' if a.merge else 'strings'
-    print('Reading %s ...' % target)
+    print('Reading %s ...' % plain(target))
     plan = make_plan(target, mode, backup_root)
     plan.part_limit = max(16, a.part_size) << 20
     print('\n' + plan_report(plan) + '\n')
@@ -719,11 +750,11 @@ def run(a):
         print('Already merged, nothing new.'); return 0
     if a.dry_run:
         print('Dry run: nothing changed.'); return 0
-    print('Originals go to: %s' % backup_root)
+    print('Originals go to: %s' % plain(backup_root))
     if not a.yes and input('Type Y and press Enter to go ahead: ').strip().lower() != 'y':
         print('Nothing changed.'); return 0
     run_dir = apply(plan, backup_root)
-    print('\nDone. Backup and report: %s\nTo undo, drop that folder onto the program.' % run_dir)
+    print('\nDone. Backup and report: %s\nTo undo, drop that folder onto the program.' % plain(run_dir))
     return 0
 
 

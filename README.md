@@ -9,9 +9,27 @@ by name and does thousands of those lookups per click, so clicking a Sim takes a
 CC String Merge moves all those strings into **one table per language**. The game finds strings by their key, not by
 the table they are in, so no text changes in game.
 
-**Measured** on a library with about 130,000 string tables: building the Sim's pie menu took 415-460 ms before and
-100-170 ms after.
-<!-- TODO PLAY-12: before/after for the default strings mode on a separate-files library -->
+## Measured
+
+One PC, one save, 6,282 CC packages from ATS3 and MTS (3.4 GB, about 150,000 string tables), each setup started
+two or three times. Times are wall-clock; the pie menu is the active Sim's own menu.
+
+| | Separate files (no tool) | Strings package (default) | Merge mode (`--merge`) |
+|---|---|---|---|
+| Sim's pie menu | 590-633 ms | 135-138 ms | 102 ms |
+| One string lookup | 52 µs | 0.7 µs | 0.7 µs |
+| Game start to main menu | 106-108 s | 78 s | 29 s |
+| Load the save (click to loading screen gone) | 219-225 s | 194 s | 29-31 s |
+| Game memory (virtual, peak) | 2.7 GB | 2.5 GB | 2.5-2.8 GB |
+| Files in Mods | 6,282 | 6,283 | 13 |
+
+Every string was still found in all three setups (3,000 sampled), and undo gave back all 6,282 files byte for byte.
+
+**Is merge mode worth it?** The strings package already fixes the slow menu. Merge mode fixes loading: with
+thousands of CC files it cut loading the save from over three minutes to half a minute, and the main menu came up
+almost four times sooner. The cost: you can no longer remove one item by deleting its file (undo the run, delete
+the file, run the tool again). With a few hundred CC files the default is enough; with thousands, merge mode saves
+minutes on every start.
 
 ## How to use it
 

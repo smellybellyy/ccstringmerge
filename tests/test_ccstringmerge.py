@@ -71,15 +71,16 @@ class Base(unittest.TestCase):
         P = lambda *a: os.path.join(self.mods, *a)
         # a normal CC object: OBJD + image + 3 languages, one compressed
         write_pkg(P('chair.package'), [(OBJD, 0, 1, b'objd-chair' * 50, False), (IMG, 0, 2, b'img' * 300, True)]
-                  + langs(0x11, [(0, [(1, 'Chair'), (2, 'Nice chair')], True), (1, [(1, 'Stuhl')], False),
+                  + langs(0x11, [(0, [(1, 'Chair'), (2, 'Nice chair'), (12, '')], True), (1, [(1, 'Stuhl')], False),
                                  (2, [(1, 'Chaise')], False)]))
         # index with constant group (flags 2), in a subfolder, group != 0
         write_pkg(P('Sub', 'table.package'), [(OBJD, 7, 3, b'objd-table' * 40, False),
                                                (m.STBL, 7, 0x22, stbl([(3, 'Table')]), False),
                                                (m.STBL, 7, (1 << 56) | 0x22, stbl([(3, 'Tisch')]), True)], flags=2)
-        # same key as chair with different text -> conflict, and a same-text duplicate
+        # same key as chair with different text -> conflict, and a same-text duplicate; key 12 is empty in chair
+        # and real here, the real text has to win although chair comes first (PLAY-12 run B, TheJim07 walls)
         write_pkg(P('zz_lamp.package'), [(OBJD, 0, 4, b'objd-lamp', False)]
-                  + langs(0x33, [(0, [(1, 'Lamp?'), (2, 'Nice chair'), (5, 'Lamp')], False)]))
+                  + langs(0x33, [(0, [(1, 'Lamp?'), (2, 'Nice chair'), (5, 'Lamp'), (12, 'Real text')], False)]))
         # strings only (e.g. a translation package)
         write_pkg(P('strings_only.package'), langs(0x44, [(0, [(9, 'Only text')], False)]))
         # no strings at all, index position only at offset 40
@@ -116,7 +117,9 @@ class StringsMode(Base):
         self.assertEqual(plan.untouched, 1)
         self.assertEqual(plan.pool.conflicts, 1)
         self.assertEqual(plan.pool.same, 1)
-        self.assertEqual(plan.pool.tables[0], {1: 'Chair', 2: 'Nice chair', 3: 'Table', 5: 'Lamp', 9: 'Only text'})
+        self.assertEqual(plan.pool.filled, 1)
+        self.assertEqual(plan.pool.tables[0], {1: 'Chair', 2: 'Nice chair', 3: 'Table', 5: 'Lamp', 9: 'Only text',
+                                               12: 'Real text'})
         self.assertEqual(plan.pool.tables[1], {1: 'Stuhl', 3: 'Tisch'})
 
     def test_apply_and_undo(self):
@@ -136,6 +139,22 @@ class StringsMode(Base):
         run_dir = os.path.join(backup_root, os.listdir(backup_root)[0])
         self.assertEqual(self.run_tool(run_dir), 0)
         self.assertEqual(tree_hashes(self.mods), self.before)
+
+    @unittest.skipUnless(os.name == 'nt', 'the 260-character path limit is a Windows one')
+    def test_long_paths(self):
+        # 2026-11-05 PLAY-12: a 255-character CC path is fine in Mods but past 260 in the backup folder (WinError 3)
+        sub = os.path.join(self.mods, 'D' * 60)
+        p = os.path.join(sub, 'L' * (255 - len(sub) - 1 - len('.package')) + '.package')
+        write_pkg(p, [(OBJD, 0, 9, b'objd-long', False)] + langs(0x66, [(0, [(11, 'Long')], False)]))
+        before = tree_hashes(self.mods)
+        self.assertEqual(self.run_tool(self.mods), 0)
+        backup_root = os.path.join(self.root, 'The Sims 3', m.BACKUP_DIR_NAME)
+        run_dir = os.path.join(backup_root, os.listdir(backup_root)[0])
+        bak = os.path.join(run_dir, 'files', os.path.relpath(p, self.mods))
+        self.assertGreater(len(bak), 260)
+        self.assertTrue(os.path.exists(m.long_path(bak)))
+        self.assertEqual(self.run_tool(run_dir), 0)
+        self.assertEqual(tree_hashes(self.mods), before)
 
     def test_new_cc_after_a_run(self):
         self.run_tool(self.mods)

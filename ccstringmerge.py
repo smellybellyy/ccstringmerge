@@ -22,6 +22,7 @@ Safety
 import argparse, ctypes, datetime, hashlib, json, os, random, shutil, struct, subprocess, sys
 
 VERSION = '0.1.0'
+WEBSITE = 'https://sims3.smellybelly.de/mods/cc-string-merge/'
 STBL = 0x220557DA
 S3SA = 0x073FAA07
 MANIFEST_RES = 0x73E93EEB      # per-package manifest written by Sims3Pack converters, instance 0 in every package
@@ -466,6 +467,7 @@ def apply(plan, backup_root):
     m = Manifest(os.path.join(run_dir, MANIFEST))
     m.write(op='run', version=VERSION, mode=plan.mode, target=plain(os.path.abspath(plan.target)), started=stamp)
     with open(os.path.join(run_dir, REPORT), 'w', encoding='utf-8') as f:
+        f.write('CC String Merge %s, %s\n\n' % (VERSION, WEBSITE))
         f.write(plan_report(plan) + '\n')
     try:
         for i, (rel, action) in enumerate(plan.work, 1):
@@ -694,7 +696,8 @@ def game_running():
 
 
 def main(argv=None):
-    ap = argparse.ArgumentParser(prog='ccstringmerge', description='Faster Sim menus in The Sims 3 with lots of CC.')
+    ap = argparse.ArgumentParser(prog='ccstringmerge', description='Faster Sim menus in The Sims 3 with lots of CC.',
+                                 epilog='Updates and help: ' + WEBSITE)
     ap.add_argument('folder', nargs='?', help='Mods\\Packages folder (default: the one in Documents), '
                                               'or a backup run folder to undo it')
     ap.add_argument('--merge', action='store_true', help='also merge all CC packages into a few big ones')
@@ -721,7 +724,7 @@ def main(argv=None):
 
 
 def run(a):
-    print('CC String Merge %s\n' % VERSION)
+    print('CC String Merge %s\n%s\n' % (VERSION, WEBSITE))
     folder = a.undo or a.folder
     folder = long_path(folder) if folder else None
     if folder and os.path.isfile(os.path.join(folder, MANIFEST)):
@@ -754,7 +757,8 @@ def run(a):
     if not a.yes and input('Type Y and press Enter to go ahead: ').strip().lower() != 'y':
         print('Nothing changed.'); return 0
     run_dir = apply(plan, backup_root)
-    print('\nDone. Backup and report: %s\nTo undo, drop that folder onto the program.' % plain(run_dir))
+    print('\nDone. Backup and report: %s\nTo undo, drop that folder onto the program.\nUpdates and help: %s'
+          % (plain(run_dir), WEBSITE))
     return 0
 
 

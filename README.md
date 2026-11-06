@@ -9,6 +9,8 @@ by name and does thousands of those lookups per click, so clicking a Sim takes a
 CC String Merge moves all those strings into **one table per language**. The game finds strings by their key, not by
 the table they are in, so no text changes in game.
 
+Download, how-to and updates: [sims3.smellybelly.de](https://sims3.smellybelly.de/mods/cc-string-merge/).
+
 ## Measured
 
 One PC, one save, 6,282 CC packages from ATS3 and MTS (3.4 GB, about 150,000 string tables), each setup started

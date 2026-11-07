@@ -96,6 +96,11 @@ The exe is not code-signed. Windows SmartScreen may say "Windows protected your 
 Share the link to this page instead of uploading the exe elsewhere. That way everyone gets fixes and can check the
 checksum.
 
+## Support
+
+If it made your Sims faster, you can leave a tip on [Ko-fi](https://ko-fi.com/smellybelly). Never required, the tool
+stays free.
+
 ## Licence
 
 MIT, see [LICENSE](LICENSE). Not made by or affiliated with Electronic Arts. The Sims is a trademark of Electronic

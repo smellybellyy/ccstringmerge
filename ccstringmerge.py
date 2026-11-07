@@ -467,7 +467,7 @@ def apply(plan, backup_root):
     m = Manifest(os.path.join(run_dir, MANIFEST))
     m.write(op='run', version=VERSION, mode=plan.mode, target=plain(os.path.abspath(plan.target)), started=stamp)
     with open(os.path.join(run_dir, REPORT), 'w', encoding='utf-8') as f:
-        f.write('CC String Merge %s, %s\n\n' % (VERSION, WEBSITE))
+        f.write('CC String Merge %s by SmellyMods, %s\n\n' % (VERSION, WEBSITE))
         f.write(plan_report(plan) + '\n')
     try:
         for i, (rel, action) in enumerate(plan.work, 1):
@@ -724,7 +724,7 @@ def main(argv=None):
 
 
 def run(a):
-    print('CC String Merge %s\n%s\n' % (VERSION, WEBSITE))
+    print('CC String Merge %s by SmellyMods\n%s\n' % (VERSION, WEBSITE))
     folder = a.undo or a.folder
     folder = long_path(folder) if folder else None
     if folder and os.path.isfile(os.path.join(folder, MANIFEST)):

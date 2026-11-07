@@ -1,5 +1,7 @@
 # CC String Merge
 
+A SmellyMods tool by SmellyBelly.
+
 Faster Sim menus in **The Sims 3** when you have a lot of custom content.
 
 Every CC object brings its own string tables, usually 23 of them (one per language). With a few thousand objects the

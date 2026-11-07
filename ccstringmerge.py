@@ -22,6 +22,7 @@ Safety
 import argparse, ctypes, datetime, hashlib, json, os, random, shutil, struct, subprocess, sys
 
 VERSION = '0.1.0'
+TITLE = 'SmellyMods CC String Merge'   # console window title and first line
 WEBSITE = 'https://sims3.smellybelly.de/mods/cc-string-merge/'
 STBL = 0x220557DA
 S3SA = 0x073FAA07
@@ -467,7 +468,7 @@ def apply(plan, backup_root):
     m = Manifest(os.path.join(run_dir, MANIFEST))
     m.write(op='run', version=VERSION, mode=plan.mode, target=plain(os.path.abspath(plan.target)), started=stamp)
     with open(os.path.join(run_dir, REPORT), 'w', encoding='utf-8') as f:
-        f.write('CC String Merge %s by SmellyMods, %s\n\n' % (VERSION, WEBSITE))
+        f.write('%s %s, %s\n\n' % (TITLE, VERSION, WEBSITE))
         f.write(plan_report(plan) + '\n')
     try:
         for i, (rel, action) in enumerate(plan.work, 1):
@@ -709,6 +710,11 @@ def main(argv=None):
     ap.add_argument('--yes', action='store_true', help='do not ask, do not wait for Enter at the end')
     ap.add_argument('--version', action='version', version=VERSION)
     a = ap.parse_args(argv)
+    if os.name == 'nt':
+        try:
+            ctypes.windll.kernel32.SetConsoleTitleW(TITLE)
+        except Exception:
+            pass
     pause = not a.yes and sys.stdin is not None and sys.stdin.isatty()
     try:
         return run(a)
@@ -724,7 +730,7 @@ def main(argv=None):
 
 
 def run(a):
-    print('CC String Merge %s by SmellyMods\n%s\n' % (VERSION, WEBSITE))
+    print('%s %s\n%s\n' % (TITLE, VERSION, WEBSITE))
     folder = a.undo or a.folder
     folder = long_path(folder) if folder else None
     if folder and os.path.isfile(os.path.join(folder, MANIFEST)):

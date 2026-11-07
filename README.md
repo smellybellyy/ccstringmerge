@@ -9,6 +9,11 @@ by name and does thousands of those lookups per click, so clicking a Sim takes a
 CC String Merge moves all those strings into **one table per language**. The game finds strings by their key, not by
 the table they are in, so no text changes in game.
 
+![Clicking your own Sim: before, the menu takes 1.17 seconds to appear; after CC String Merge, 0.30 seconds.](docs/pie-click-before-after.webp)
+
+*Clicking your own Sim, before and after (with the default strings package). The timer runs from the mouse press
+until the menu is on screen, so it is a little higher than the measured times below.*
+
 Download, how-to and updates: [sims3.smellybelly.de](https://sims3.smellybelly.de/mods/cc-string-merge/).
 
 ## Measured

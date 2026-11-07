@@ -21,11 +21,13 @@ Download, how-to and updates: [sims3.smellybelly.de](https://sims3.smellybelly.d
 ## Measured
 
 One PC, one save, 6,282 CC packages from ATS3 and MTS (3.4 GB, about 150,000 string tables), each setup started
-two or three times. Times are wall-clock; the pie menu is the active Sim's own menu.
+two or three times. Loading times are wall-clock. The menu times are the script work that builds the menu: for
+another Sim the median over the other Sims on the lot, for your own Sim its own menu with 608 entries.
 
 | | Separate files (no tool) | Strings package (default) | Merge mode (`--merge`) |
 |---|---|---|---|
-| Sim's pie menu | 590-633 ms | 135-138 ms | 102 ms |
+| Your own Sim's pie menu | 949-1,200 ms | 207-211 ms | 142 ms |
+| Another Sim's pie menu | 590-633 ms | 135-138 ms | 102 ms |
 | One string lookup | 52 µs | 0.7 µs | 0.7 µs |
 | Game start to main menu | 106-108 s | 78 s | 29 s |
 | Load the save (click to loading screen gone) | 219-225 s | 194 s | 29-31 s |
